@@ -14,6 +14,8 @@
 @property UICollectionView *collectionView;
 @property NSMutableArray<NSString *> *data;
 @property UILongPressGestureRecognizer *dragReorderRecognizer;
+@property CollectionViewCell *layoutCell;
+@property NSMutableDictionary<NSIndexPath *, NSValue *> *cellSizes;
 @end
 
 @implementation ViewController
@@ -27,6 +29,8 @@
     {
         [self.data addObject:[NSString stringWithFormat:@"%i", i]];
     }
+    
+    self.cellSizes = [NSMutableDictionary dictionary];
     
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
     layout.estimatedItemSize = UICollectionViewFlowLayoutAutomaticSize;
@@ -45,10 +49,27 @@
     self.collectionView.backgroundColor = [UIColor whiteColor];
 }
 
-//-(CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
-//{
-//    return CGSizeMake(60, 80);
-//}
+-(void)reloadData
+{
+    [self.cellSizes removeAllObjects];
+    [self.collectionView reloadData];
+}
+
+-(CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout *)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSValue *val = [self.cellSizes objectForKey:indexPath];
+    if (val)
+        return val.CGSizeValue;
+    
+    if (!self.layoutCell)
+        self.layoutCell = [[CollectionViewCell alloc]initWithFrame:CGRectZero];
+    
+    [self _configureCell:self.layoutCell forIndexPath:indexPath];
+    CGSize cellSize = [self.layoutCell systemLayoutSizeFittingSize:UILayoutFittingCompressedSize];
+    [self.cellSizes setObject:[NSValue valueWithCGSize:cellSize] forKey:indexPath];
+    
+    return cellSize;
+}
 
 -(void)onLongPress:(UILongPressGestureRecognizer *)sender
 {
@@ -90,8 +111,13 @@
 - (UICollectionViewCell *)collectionView:(nonnull UICollectionView *)collectionView cellForItemAtIndexPath:(nonnull NSIndexPath *)indexPath
 {
     CollectionViewCell *cell = [collectionView dequeueReusableCellWithReuseIdentifier:@"Cell" forIndexPath:indexPath];
-    cell.label.text = self.data[indexPath.item];
+    [self _configureCell:cell forIndexPath:indexPath];
     return cell;
+}
+
+-(void)_configureCell:(CollectionViewCell *)cell forIndexPath:(NSIndexPath *)indexPath
+{
+    cell.label.text = self.data[indexPath.item];
 }
 
 -(BOOL)collectionView:(UICollectionView *)collectionView canMoveItemAtIndexPath:(NSIndexPath *)indexPath
